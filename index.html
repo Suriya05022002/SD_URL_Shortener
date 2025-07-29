@@ -1,0 +1,2235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener System Design: Complete Architecture Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-light: #9ca3af;
+            --text-white: #ffffff;
+            
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --bg-dark: #0f172a;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --bg-card: #ffffff;
+            
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e1;
+            --border-dark: #94a3b8;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+            --radius-full: 9999px;
+            
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            overflow-x: hidden;
+            font-weight: 400;
+        }
+
+        /* Utility Classes */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+        }
+
+        .container-sm {
+            max-width: 768px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+        }
+
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .font-light { font-weight: 300; }
+        .font-normal { font-weight: 400; }
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+        .font-extrabold { font-weight: 800; }
+        .text-xs { font-size: 0.75rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-base { font-size: 1rem; }
+        .text-lg { font-size: 1.125rem; }
+        .text-xl { font-size: 1.25rem; }
+        .text-2xl { font-size: 1.5rem; }
+        .text-3xl { font-size: 1.875rem; }
+        .text-4xl { font-size: 2.25rem; }
+        .text-5xl { font-size: 3rem; }
+        .mb-2 { margin-bottom: var(--spacing-sm); }
+        .mb-4 { margin-bottom: var(--spacing-md); }
+        .mb-6 { margin-bottom: var(--spacing-lg); }
+        .mb-8 { margin-bottom: var(--spacing-xl); }
+        .mt-8 { margin-top: var(--spacing-xl); }
+        .py-8 { padding: var(--spacing-xl) 0; }
+        .py-12 { padding: var(--spacing-2xl) 0; }
+        .py-16 { padding: var(--spacing-3xl) 0; }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .header.scrolled {
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 5rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--primary);
+            text-decoration: none;
+            transition: transform 0.2s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .logo-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2xl);
+            list-style: none;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            position: relative;
+            padding: var(--spacing-sm) 0;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--primary);
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: var(--radius-full);
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-md);
+            transition: background-color 0.2s ease;
+        }
+
+        .mobile-menu-btn:hover {
+            background-color: var(--bg-secondary);
+        }
+
+        .hamburger {
+            width: 1.5rem;
+            height: 1.5rem;
+            position: relative;
+        }
+
+        .hamburger span {
+            display: block;
+            width: 100%;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: var(--radius-full);
+            transition: all 0.3s ease;
+            position: absolute;
+        }
+
+        .hamburger span:nth-child(1) { top: 0; }
+        .hamburger span:nth-child(2) { top: 50%; transform: translateY(-50%); }
+        .hamburger span:nth-child(3) { bottom: 0; }
+
+        /* Hero Section */
+        .hero {
+            padding: 8rem 0 6rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            color: white;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-full);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .hero-badge-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4.5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: var(--spacing-lg);
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: var(--spacing-2xl);
+            max-width: 42rem;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-2xl);
+            margin-bottom: var(--spacing-2xl);
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg);
+            text-align: center;
+            min-width: 120px;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        .hero-cta {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            border: none;
+            outline: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            z-index: 100;
+            transition: width 0.1s ease;
+        }
+
+        /* Table of Contents */
+        .toc-section {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+            position: relative;
+        }
+
+        .toc-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .toc-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .toc-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto var(--spacing-2xl);
+            line-height: 1.6;
+        }
+
+        .toc-intro-text {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: var(--spacing-xl) auto var(--spacing-2xl);
+            line-height: 1.7;
+            text-align: center;
+        }
+
+        .toc-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+            background: var(--bg-card);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-light);
+        }
+
+        .toc-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toc-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--border-light);
+            transition: background 0.2s ease-in-out;
+        }
+
+        .toc-item:hover {
+            background: var(--bg-tertiary);
+            transform: translateX(5px);
+        }
+
+        .toc-item:hover::before {
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+        }
+
+        .toc-item.active {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+
+        .toc-item.active::before {
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+        }
+
+        .toc-item-number {
+            width: 2.2rem;
+            height: 2.2rem;
+            background: var(--bg-tertiary);
+            color: var(--primary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            border: 1px solid var(--border-medium);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .toc-item:hover .toc-item-number,
+        .toc-item.active .toc-item-number {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--text-white);
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .toc-item-content {
+            flex-grow: 1;
+        }
+
+        .toc-item-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .toc-item-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+            line-height: 1.5;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .content-section {
+            margin-bottom: var(--spacing-3xl);
+            opacity: 0;
+            transform: translateY(2rem);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .content-section.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .section-card:hover {
+            box-shadow: var(--shadow-xl);
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: var(--spacing-2xl);
+            position: relative;
+        }
+
+        .section-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        }
+
+        .section-meta {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .step-badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+            line-height: 1.2;
+        }
+
+        .section-subtitle {
+            font-size: 1.125rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .section-content {
+            padding: var(--spacing-2xl);
+        }
+
+        .section-content h3 {
+            font-size: 1.375rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: var(--spacing-xl) 0 var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .section-content h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin: var(--spacing-lg) 0 var(--spacing-sm);
+        }
+
+        .section-content p {
+            margin-bottom: var(--spacing-md);
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .section-content ul,
+        .section-content ol {
+            margin: var(--spacing-md) 0;
+            padding-left: var(--spacing-xl);
+        }
+
+        .section-content li {
+            margin: var(--spacing-sm) 0;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .section-content strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Tables */
+        .table-container {
+            margin: var(--spacing-xl) 0;
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-light);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1e293b 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border-medium);
+        }
+
+        .data-table td {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .data-table td strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--bg-dark);
+            color: #e2e8f0;
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-xl);
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            overflow-x: auto;
+            margin: var(--spacing-xl) 0;
+            border-left: 4px solid var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Highlight Boxes */
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-left: 4px solid var(--primary);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            margin: var(--spacing-xl) 0;
+        }
+
+        .highlight-box h4 {
+            color: var(--primary);
+            margin-bottom: var(--spacing-md);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .highlight-box p {
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .highlight-box ul {
+            margin-top: var(--spacing-sm);
+        }
+
+        /* Info Boxes */
+        .info-box {
+            display: flex;
+            gap: var(--spacing-md);
+            padding: var(--spacing-xl);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-xl);
+            margin: var(--spacing-xl) 0;
+            border-left: 4px solid var(--accent);
+        }
+
+        .info-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: var(--accent);
+            color: white;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+            flex-shrink: 0;
+            box-shadow: var(--shadow-md);
+        }
+
+        .info-content p {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+
+        /* Architecture Diagram */
+        .architecture-diagram {
+            background: var(--bg-tertiary);
+            border: 2px dashed var(--border-medium);
+            border-radius: var(--radius-2xl);
+            padding: var(--spacing-2xl);
+            text-align: center;
+            margin: var(--spacing-xl) 0;
+        }
+
+        .diagram-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .diagram-flow {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            display: inline-block;
+            text-align: left;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            background: var(--bg-secondary);
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .faq-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .faq-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .faq-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .faq-question {
+            padding: var(--spacing-xl);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: var(--bg-secondary);
+        }
+
+        .faq-question h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            flex: 1;
+        }
+
+        .faq-toggle {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.125rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .faq-item.active .faq-toggle {
+            transform: rotate(45deg);
+            background: linear-gradient(135deg, var(--danger), var(--warning));
+        }
+
+        .faq-answer {
+            padding: 0 var(--spacing-xl);
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .faq-answer.active {
+            padding: 0 var(--spacing-xl) var(--spacing-xl);
+            max-height: 15rem;
+        }
+
+        .faq-answer p {
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--bg-dark);
+            color: white;
+            padding: var(--spacing-3xl) 0 var(--spacing-xl);
+        }
+
+        .footer-content {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .footer-logo {
+            font-size: 1.75rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .footer-text {
+            color: #94a3b8;
+            margin-bottom: var(--spacing-xl);
+            line-height: 1.6;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .footer-copyright {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        /* Back to Top Button */
+        #backToTopBtn {
+            display: none;
+            position: fixed;
+            bottom: var(--spacing-xl);
+            right: var(--spacing-xl);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: var(--radius-full);
+            width: 3.5rem;
+            height: 3.5rem;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 90;
+        }
+
+        #backToTopBtn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: var(--shadow-xl);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 0 var(--spacing-md);
+            }
+            
+            .hero-stats {
+                gap: var(--spacing-lg);
+            }
+            
+            .toc-list {
+                padding: var(--spacing-md);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--bg-card);
+                border-top: 1px solid var(--border-light);
+                flex-direction: column;
+                padding: var(--spacing-md);
+                gap: var(--spacing-md);
+                box-shadow: var(--shadow-lg);
+            }
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .hero {
+                padding: 6rem 0 4rem;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.125rem;
+            }
+
+            .hero-stats {
+                flex-direction: column;
+                gap: var(--spacing-md);
+                align-items: center;
+            }
+
+            .hero-cta {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .section-header {
+                padding: var(--spacing-xl);
+            }
+
+            .section-content {
+                padding: var(--spacing-xl);
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: var(--spacing-md);
+                font-size: 0.8125rem;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+
+            #backToTopBtn {
+                bottom: var(--spacing-md);
+                right: var(--spacing-md);
+                width: 3rem;
+                height: 3rem;
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 var(--spacing-sm);
+            }
+
+            .hero {
+                padding: 5rem 0 3rem;
+            }
+
+            .section-header,
+            .section-content {
+                padding: var(--spacing-md);
+            }
+
+            .toc-section {
+                padding: var(--spacing-xl) 0;
+            }
+
+            .main-content {
+                padding: var(--spacing-xl) 0;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: var(--spacing-sm);
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(2rem);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        /* Scroll Animations */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(2rem);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .scroll-reveal.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: var(--radius-full);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--primary-dark), var(--secondary));
+        }
+
+        @media screen and (max-width: 480px) {
+    img {
+      width: 90%;         /* adjust as needed */
+      display: block;
+      margin: 10px auto;  /* center the image */
+    }
+  }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    
+    <header class="header" id="header">
+        <nav class="nav container">
+            <a href="#" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-link"></i>
+                </div>
+                URL Shortener Design
+            </a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#overview-section" class="nav-link">Overview</a></li>
+                <li><a href="#problem-scope" class="nav-link">Problem Scope</a></li>
+                <li><a href="#high-level-design" class="nav-link">High-Level Design</a></li>
+                <li><a href="#deep-dive" class="nav-link">Deep Dive</a></li>
+                <li><a href="#hash-function" class="nav-link">Hash Function</a></li>
+                <li><a href="#scaling" class="nav-link">Scaling</a></li>
+                <li><a href="#faqs" class="nav-link">FAQs</a></li>
+            </ul>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <div class="hero-badge-dot"></div>
+                        System Design Deep Dive
+                    </div>
+                    <h1>URL Shortener System Design: Complete Architecture Guide</h1>
+                    <p class="hero-subtitle">
+                        Learn how to design a URL shortening service like TinyURL through this classic system design interview question with step-by-step analysis.
+                    </p>
+                    
+                    
+                    
+                    <div class="hero-cta">
+                        <a href="#table-of-contents" class="btn btn-primary">
+                            <i class="fas fa-rocket"></i>
+                            Start Learning
+                        </a>
+                        <a href="#high-level-design" class="btn btn-secondary">
+                            <i class="fas fa-sitemap"></i>
+                            View Architecture
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="table-of-contents" class="toc-section scroll-reveal">
+            <div class="container-sm">
+                <div class="toc-header">
+                    <h2 class="toc-title">Table of Contents</h2>
+                    <p class="toc-subtitle">Navigate through the complete URL shortener system design process.</p>
+                </div>
+                <p class="toc-intro-text">
+                    Ever wondered how services like TinyURL, bit.ly, or short.ly work behind the scenes? How do they handle millions of URL shortening requests while maintaining lightning-fast redirects? This comprehensive guide walks you through designing a production-ready URL shortener from scratch, covering everything from basic requirements to advanced scaling techniques.
+                </p>
+                <div class="toc-list">
+                    <a href="#problem-scope" class="toc-item">
+                        <div class="toc-item-number">1</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">Understanding the Problem & Design Scope</h3>
+                            <p class="toc-item-description">Clarifying requirements and establishing system boundaries.</p>
+                        </div>
+                    </a>
+                    <a href="#estimation" class="toc-item">
+                        <div class="toc-item-number">2</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">Back of Envelope Estimation</h3>
+                            <p class="toc-item-description">Calculating traffic, storage, and performance requirements.</p>
+                        </div>
+                    </a>
+                    <a href="#high-level-design" class="toc-item">
+                        <div class="toc-item-number">3</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">High-Level Design & API Endpoints</h3>
+                            <p class="toc-item-description">API endpoints, URL redirecting, and shortening flows.</p>
+                        </div>
+                    </a>
+                    <a href="#url-redirecting" class="toc-item">
+                        <div class="toc-item-number">4</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">URL Redirecting (301 vs 302)</h3>
+                            <p class="toc-item-description">Understanding 301 and 302 redirects.</p>
+                        </div>
+                    </a>
+                    <a href="#url-shortening-flow" class="toc-item">
+                        <div class="toc-item-number">5</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">URL Shortening Flow</h3>
+                            <p class="toc-item-description">Step-by-step process of creating short URLs.</p>
+                        </div>
+                    </a>
+                    <a href="#data-model" class="toc-item">
+                        <div class="toc-item-number">6</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">Deep Dive: Data Model</h3>
+                            <p class="toc-item-description">Database schema and storage considerations.</p>
+                        </div>
+                    </a>
+                    <a href="#hash-function" class="toc-item">
+                        <div class="toc-item-number">7</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">Deep Dive: Hash Function</h3>
+                            <p class="toc-item-description">Collision resolution vs Base 62 conversion approaches.</p>
+                        </div>
+                    </a>
+                    <a href="#hash-collision-base62" class="toc-item">
+                        <div class="toc-item-number">8</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">Hash + Collision Resolution vs Base 62</h3>
+                            <p class="toc-item-description">Comparing different hashing approaches.</p>
+                        </div>
+                    </a>
+                    <a href="#url-shortening-redirecting-implementation" class="toc-item">
+                        <div class="toc-item-number">9</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">URL Shortening & Redirecting Implementation</h3>
+                            <p class="toc-item-description">Implementing the core functionality.</p>
+                        </div>
+                    </a>
+                    <a href="#conclusion" class="toc-item">
+                        <div class="toc-item-number">10</div>
+                        <div class="toc-item-content">
+                            <h3 class="toc-item-title">Wrap Up & Additional Considerations</h3>
+                            <p class="toc-item-description">Summary and advanced considerations for production systems.</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <div class="main-content">
+            <div class="container">
+                <section id="overview-section" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Introduction</div>
+                            </div>
+                            <h2 class="section-title">Design A URL Shortener</h2>
+                            <p class="section-subtitle">In this chapter, we will tackle an interesting and classic system design interview question: designing a URL shortening service like tinyurl.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="problem-scope" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 1</div>
+                            </div>
+                            <h2 class="section-title">Step 1 - Understand the problem and establish design scope</h2>
+                            <p class="section-subtitle">System design interview questions are intentionally left open-ended. To design a well-crafted system, it is critical to ask clarification questions.</p>
+                        </div>
+                        <div class="section-content">
+                            <h3><i class="fas fa-comments"></i> Interview Dialogue</h3>
+
+                            <div class="code-block">
+Candidate: Can you give an example of how a URL shortener work?<br>
+
+Interviewer: Assume URL https://www.systeminterview.com/q=chatsystem&c=loggedin&v=v3&l=long is the original URL. Your service creates an alias with shorter length: https://tinyurl.com/y7keocwj. If you click the alias, it redirects you to the original URL.<br>
+
+Candidate: What is the traffic volume? <br>
+Interviewer: 100 million URLs are generated per day.<br>
+
+Candidate: How long is the shortened URL?<br>
+Interviewer: As short as possible.<br>
+
+Candidate: What characters are allowed in the shortened URL?<br>
+Interviewer: Shortened URL can be a combination of numbers (0-9) and characters (a-z, A-Z).<br>
+
+Candidate: Can shortened URLs be deleted or updated?<br>
+Interviewer: For simplicity, let us assume shortened URLs cannot be deleted or updated.<br>
+                            </div>
+
+                            <h3><i class="fas fa-list"></i> Basic Use Cases</h3>
+                            <ol>
+                                <li><strong>URL shortening:</strong> given a long URL => return a much shorter URL</li>
+                                <li><strong>URL redirecting:</strong> given a shorter URL => redirect to the original URL</li>
+                                <li><strong>High availability, scalability, and fault tolerance considerations</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="estimation" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 2</div>
+                            </div>
+                            <h2 class="section-title">Back-of-Envelope Estimation</h2>
+                            <p class="section-subtitle">Calculating system requirements for traffic, storage, and performance planning.</p>
+                        </div>
+                        <div class="section-content">
+                            <h3><i class="fas fa-calculator"></i> Traffic Estimation</h3>
+                            
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Metric</th>
+                                            <th>Calculation</th>
+                                            <th>Result</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Write Operations</strong></td>
+                                            <td>100 million URLs / day</td>
+                                            <td>100M/day</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Write QPS</strong></td>
+                                            <td>100M / (24 × 3600)</td>
+                                            <td>~1,160 writes/sec</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Read:Write Ratio</strong></td>
+                                            <td>Assumed 10:1</td>
+                                            <td>10:1</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Read QPS</strong></td>
+                                            <td>1,160 × 10</td>
+                                            <td>~11,600 reads/sec</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h3><i class="fas fa-database"></i> Storage Estimation</h3>
+                            
+                            <div class="code-block">
+Service Lifetime: 10 years
+Total URLs: 100M × 365 × 10 = 365 billion records
+Average URL Length: 100 characters
+Storage Required: 365B × 100 bytes = 36.5 TB
+                            </div>
+
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-chart-line"></i> Key Insights</h4>
+                                <ul>
+                                    <li>Read-heavy system (10:1 read-to-write ratio)</li>
+                                    <li>Moderate write traffic (~1,160 QPS)</li>
+                                    <li>High read traffic (~11,600 QPS)</li>
+                                    <li>Significant storage requirements (36.5 TB over 10 years)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="high-level-design" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 3</div>
+                            </div>
+                            <h2 class="section-title">High-Level Design & API Endpoints</h2>
+                            <p class="section-subtitle">API endpoints, URL redirecting, and URL shortening flows at a high level.</p>
+                        </div>
+                        <div class="section-content">
+                            <h3><i class="fas fa-code"></i> API Endpoints</h3>
+                            <p>We'll design REST-style API endpoints for our URL shortener:</p>
+
+                            <h4>1. URL Shortening Endpoint</h4>
+                            <div class="code-block">
+POST /api/v1/data/shorten
+Request: { "longUrl": "https://www.example.com/very/long/url" }
+Response: { "shortUrl": "https://tinyurl.com/abc123" }
+                            </div>
+
+                            <h4>2. URL Redirecting Endpoint</h4>
+                            <div class="code-block">
+GET /api/v1/{shortUrl}
+Response: HTTP 301/302 redirect to original URL
+                            </div>
+
+                            <h3><i class="fas fa-exchange-alt"></i> URL Redirecting Process</h3>
+                            <p>When a user clicks a short URL, here's what happens:</p>
+
+                            <div class="architecture-diagram">
+                                <div class="diagram-title">URL Redirect Flow</div>
+                                <div class="diagram-flow">
+                                    <img src="URL1.png">
+1. User clicks: https://tinyurl.com/abc123<br>
+2. Browser sends GET request to server <br>
+3. Server looks up original URL in database<br>
+4. Server responds with 301/302 redirect <br>
+5. Browser redirects to original URL
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="url-redirecting" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 4</div>
+                            </div>
+                            <h2 class="section-title">URL Redirecting (301 vs 302)</h2>
+                            <p class="section-subtitle">Understanding 301 and 302 redirects.</p>
+                        </div>
+                        <div class="section-content">
+                            <h3><i class="fas fa-info-circle"></i> 301 vs 302 Redirect</h3>
+                            
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Redirect Type</th>
+                                            <th>Meaning</th>
+                                            <th>Pros</th>
+                                            <th>Cons</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>301 Permanent</strong></td>
+                                            <td>URL permanently moved</td>
+                                            <td>Browser caches response, reduces server load</td>
+                                            <td>Difficult to track analytics</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>302 Temporary</strong></td>
+                                            <td>URL temporarily moved</td>
+                                            <td>Better for analytics and tracking</td>
+                                            <td>Higher server load</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="url-shortening-flow" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 5</div>
+                            </div>
+                            <h2 class="section-title">URL Shortening Flow</h2>
+                            <p class="section-subtitle">Step-by-step process of creating short URLs using Base 62 conversion.</p>
+                        </div>
+                        <div class="section-content">
+                            <div class="architecture-diagram">
+                                <div class="diagram-title">URL Shortening Process</div>
+                                <div class="diagram-flow">
+Long URL → Hash Function → Hash Value → Short URL
+www.tinyurl.com/{hashValue}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="data-model" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 6</div>
+                            </div>
+                            <h2 class="section-title">Deep Dive: Data Model</h2>
+                            <p class="section-subtitle">Database schema and storage considerations for our URL shortener.</p>
+                        </div>
+                        <div class="section-content">
+                            <p>While a hash table is a good starting point, it's not feasible for real-world systems due to memory limitations. We'll use a relational database instead.</p>
+
+                            <h3><i class="fas fa-table"></i> Database Schema</h3>
+                            
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Column</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>id</strong></td>
+                                            <td>BIGINT</td>
+                                            <td>Primary key, auto-increment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>shortUrl</strong></td>
+                                            <td>VARCHAR(7)</td>
+                                            <td>Short URL hash value</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>longUrl</strong></td>
+                                            <td>VARCHAR(2048)</td>
+                                            <td>Original long URL</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>createdAt</strong></td>
+                                            <td>DATETIME</td>
+                                            <td>Creation timestamp</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>expiresAt</strong></td>
+                                            <td>DATETIME</td>
+                                            <td>Expiration timestamp (optional)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="info-box">
+                                <div class="info-icon">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <div class="info-content">
+                                    <p><strong>Note:</strong> We use VARCHAR(7) for shortUrl because our hash function will generate 7-character strings (explained in the next section).</p>
+                                </div>
+                            </div>
+
+                            <h3><i class="fas fa-search"></i> Database Indexing</h3>
+                            <ul>
+                                <li><strong>Primary Index:</strong> On `id` column for fast lookups</li>
+                                <li><strong>Unique Index:</strong> On `shortUrl` column to prevent duplicates</li>
+                                <li><strong>Index:</strong> On `longUrl` column for reverse lookups</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="hash-function" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 7</div>
+                            </div>
+                            <h2 class="section-title">Deep Dive: Hash Function</h2>
+                            <p class="section-subtitle">Exploring two approaches: Hash + Collision Resolution vs Base 62 Conversion.</p>
+                        </div>
+                        <div class="section-content">
+                            <h3><i class="fas fa-ruler"></i> Hash Value Length Calculation</h3>
+                            <p>With characters [0-9, a-z, A-Z], we have 62 possible characters. We need to find the smallest n where 62^n ≥ 365 billion URLs:</p>
+
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Length (n)</th>
+                                            <th>Maximum URLs (62^n)</th>
+                                            <th>Sufficient?</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>1</td>
+                                            <td>62</td>
+                                            <td>❌</td>
+                                        </tr>
+                                        <tr>
+                                            <td>2</td>
+                                            <td>3,844</td>
+                                            <td>❌</td>
+                                        </tr>
+                                        <tr>
+                                            <td>3</td>
+                                            <td>238,328</td>
+                                            <td>❌</td>
+                                        </tr>
+                                        <tr>
+                                            <td>4</td>
+                                            <td>14,776,336</td>
+                                            <td>❌</td>
+                                        </tr>
+                                        <tr>
+                                            <td>5</td>
+                                            <td>916,132,832</td>
+                                            <td>❌</td>
+                                        </tr>
+                                        <tr>
+                                            <td>6</td>
+                                            <td>56,800,235,584</td>
+                                            <td>❌</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>7</strong></td>
+                                            <td><strong>3,521,614,606,208 (~3.5 trillion)</strong></td>
+                                            <td><strong>✅</strong></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-check-circle"></i> Result</h4>
+                                <p>We need <strong>7 characters</strong> for our hash value to support 365 billion URLs with room for growth.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="hash-collision-base62" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 8</div>
+                            </div>
+                            <h2 class="section-title">Hash + Collision Resolution vs Base 62</h2>
+                            <p class="section-subtitle">Exploring two approaches: Hash + Collision Resolution vs Base 62 Conversion.</p>
+                        </div>
+                        <div class="section-content">
+                            <h3><i class="fas fa-route"></i> Approach 1: Hash + Collision Resolution</h3>
+                            <p>Use well-known hash functions like CRC32, MD5, or SHA-1, then take the first 7 characters:</p>
+
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Hash Function</th>
+                                            <th>Hash Value (Hex)</th>
+                                            <th>First 7 Chars</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>CRC32</td>
+                                            <td>5cb54054</td>
+                                            <td>5cb5405</td>
+                                        </tr>
+                                        <tr>
+                                            <td>MD5</td>
+                                            <td>5a62509a84df9ee03fe1230b9df8b84e</td>
+                                            <td>5a62509</td>
+                                        </tr>
+                                        <tr>
+                                            <td>SHA-1</td>
+                                            <td>0eeae7916c06853901d9ccbefbfcaf4de57ed85b</td>
+                                            <td>0eeae79</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h4><i class="fas fa-exclamation-triangle"></i> Collision Resolution</h4>
+                            <p>When collisions occur, append a predefined string and rehash until no collision exists:</p>
+
+                            <div class="code-block">
+1. Hash "https://example.com" → "abc1234" <br>
+2. Check if "abc1234" exists in database <br>
+3. If exists, hash "https://example.com" + "1" → "def5678"<br>
+4. Repeat until unique hash found
+                            </div>
+
+                            <h3><i class="fas fa-calculator"></i> Approach 2: Base 62 Conversion</h3>
+                            <p>Convert a unique ID to base 62 representation using our 62-character set:</p>
+
+                            <div class="code-block">
+Character Set: [0-9, a-z, A-Z]
+Mapping: 0→0, 1→1, ..., 9→9, 10→a, 11→b, ..., 35→z, 36→A, ..., 61→Z
+
+Example: Convert ID 11157 to base 62
+11157₁₀ = 2×62² + 55×62¹ + 59×62⁰ = [2, 55, 59] → [2, T, X]
+Result: "2TX"
+                            </div>
+
+                            <h3><i class="fas fa-balance-scale"></i> Comparison of Approaches</h3>
+
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Aspect</th>
+                                            <th>Hash + Collision Resolution</th>
+                                            <th>Base 62 Conversion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>URL Length</strong></td>
+                                            <td>Fixed length (7 chars)</td>
+                                            <td>Variable length (grows with ID)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>ID Generator</strong></td>
+                                            <td>Not required</td>
+                                            <td>Requires unique ID generator</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Collisions</strong></td>
+                                            <td>Possible, needs resolution</td>
+                                            <td>Not possible (unique IDs)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Predictability</strong></td>
+                                            <td>Hard to predict next URL</td>
+                                            <td>Easy to predict (security concern)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Performance</strong></td>
+                                            <td>May require multiple DB queries</td>
+                                            <td>Single operation</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="info-box">
+                                <div class="info-icon">
+                                    <i class="fas fa-thumbs-up"></i>
+                                </div>
+                                <div class="info-content">
+                                    <p><strong>Recommendation:</strong> We'll use Base 62 conversion for its simplicity and performance benefits.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="url-shortening-redirecting-implementation" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 9</div>
+                            </div>
+                            <h2 class="section-title">URL Shortening & Redirecting Implementation</h2>
+                            <p class="section-subtitle">Step-by-step process of creating short URLs using Base 62 conversion.</p>
+                        </div>
+                        <div class="section-content">
+                            <div class="architecture-diagram">
+                                <div class="diagram-title">URL Shortening Process</div>
+                                <div class="diagram-flow">
+1. Client sends POST request with longURL <br>
+2. Check if longURL already exists in database <br>
+3. If exists: return existing shortURL <br>
+4. If not: generate unique ID <br>
+5. Convert ID to shortURL using Base 62 <br>
+6. Save ID, shortURL, longURL to database <br>
+7. Return shortURL to client <br>
+                                </div>
+                            </div>
+
+                            <h3><i class="fas fa-example"></i> Concrete Example</h3>
+                            <div class="code-block">
+Input: https://en.wikipedia.org/wiki/Systems_design <br>
+Unique ID: 2009215674938 <br>
+Base 62 Conversion: 2009215674938 → "zn9edcu" <br>
+Short URL: https://tinyurl.com/zn9edcu
+                            </div>
+
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Short URL</th>
+                                            <th>Long URL</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>2009215674938</td>
+                                            <td>zn9edcu</td>
+                                            <td>https://en.wikipedia.org/wiki/Systems_design</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h3><i class="fas fa-id-card"></i> Unique ID Generator</h3>
+                            <p>The distributed unique ID generator is crucial for our system. Several approaches exist:</p>
+
+                            <ul>
+                                <li><strong>Auto-increment Database ID:</strong> Simple but not scalable</li>
+                                <li><strong>UUID:</strong> Globally unique but too long</li>
+                                <li><strong>Snowflake Algorithm:</strong> Twitter's approach with timestamp + machine ID + sequence</li>
+                                <li><strong>Database Ticket Servers:</strong> Centralized ID generation</li>
+                            </ul>
+
+                            <div class="highlight-box">
+                                <h4><i class="fas fa="snowflake"></i> Recommended: Snowflake Algorithm</h4>
+                                <p>Generates 64-bit IDs with timestamp, datacenter ID, machine ID, and sequence number for high performance and uniqueness.</p>
+                            </div>
+
+                            <div class="architecture-diagram">
+                                <div class="diagram-title">URL Redirecting Process</div>
+                                <div class="diagram-flow">
+1. User clicks short URL: https://tinyurl.com/zn9edcu
+2. Load balancer forwards request to web servers
+3. Check cache for shortURL → longURL mapping
+4. If in cache: return longURL directly
+5. If not in cache: query database
+6. If found: cache result and return longURL
+7. If not found: return 404 error
+8. Browser redirects user to longURL
+                                </div>
+                            </div>
+
+                            <h3><i class="fas fa-tachometer-alt"></i> Performance Optimization</h3>
+                            <p>Since reads are 10x more frequent than writes, caching is essential:</p>
+
+                            <ul>
+                                <li><strong>Cache Hit:</strong> Return result immediately (~1ms)</li>
+                                <li><strong>Cache Miss:</strong> Query database, cache result, return (~10-50ms)</li>
+                                <li><strong>Cache Strategy:</strong> LRU (Least Recently Used) eviction</li>
+                                <li><strong>Cache TTL:</strong> 24 hours for popular URLs</li>
+                            </ul>
+
+                          
+                           
+ <img src="URL2.png">
+                            
+
+                            <div class="info-box">
+                                <div class="info-icon">
+                                    <i class="fas fa-rocket"></i>
+                                </div>
+                                <div class="info-content">
+                                    <p><strong>Performance Tip:</strong> Popular URLs (80/20 rule) should have high cache hit rates, dramatically reducing database load.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="conclusion" class="content-section">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-meta">
+                                <div class="step-badge">Step 10</div>
+                            </div>
+                            <h2 class="section-title">Wrap Up & Additional Considerations</h2>
+                            <p class="section-subtitle">Summary of our URL shortener design and advanced considerations for production systems.</p>
+                        </div>
+                        <div class="section-content">
+                            <h3><i class="fas fa-check-circle"></i> What We've Covered</h3>
+                            <ul>
+                                <li><strong>API Design:</strong> RESTful endpoints for shortening and redirecting</li>
+                                <li><strong>Data Model:</strong> Efficient database schema with proper indexing</li>
+                                <li><strong>Hash Function:</strong> Base 62 conversion for optimal performance</li>
+                                <li><strong>System Flows:</strong> Complete URL shortening and redirecting processes</li>
+                                <li><strong>Scaling:</strong> Caching, load balancing, and database optimization</li>
+                            </ul>
+
+                            <h3><i class="fas fa-plus-circle"></i> Additional Production Considerations</h3>
+
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Topic</th>
+                                            <th>Considerations</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Security</strong></td>
+                                            <td>HTTPS enforcement, malicious URL detection, spam prevention</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Monitoring</strong></td>
+                                            <td>Health checks, error rates, response times, capacity planning</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Disaster Recovery</strong></td>
+                                            <td>Multi-region deployment, backup strategies, failover procedures</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Compliance</strong></td>
+                                            <td>GDPR, data retention policies, audit logging</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h3><i class="fas fa-star"></i> Key Success Factors</h3>
+                            <div class="highlight-box">
+                                <h4><i class="fas fa="trophy"></i> Production-Ready System Characteristics</h4>
+                                <ul>
+                                    <li><strong>High Availability:</strong> 99.9% uptime with redundancy</li>
+                                    <li><strong>Low Latency:</strong> Sub-100ms response times</li>
+                                    <li><strong>Scalability:</strong> Handle traffic spikes gracefully</li>
+                                    <li><strong>Reliability:</strong> Data consistency and durability</li>
+                                    <li><strong>Observability:</strong> Comprehensive monitoring and alerting</li>
+                                </ul>
+                            </div>
+
+                            <div class="info-box">
+                                <div class="info-icon">
+                                    <i class="fas fa-graduation-cap"></i>
+                                </div>
+                                <div class="info-content">
+                                    <p><strong>Interview Tip:</strong> Always discuss trade-offs, mention alternative approaches, and show understanding of real-world constraints.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <section id="faqs" class="faq-section">
+            <div class="container">
+                <div class="faq-header">
+                    <h2 class="faq-title">FAQs About URL Shortener Design</h2>
+                    <p class="faq-subtitle">Common questions about URL shortener architecture and implementation</p>
+                </div>
+                <div class="faq-container">
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <h3>Q1. Why use Base 62 instead of Base 64 encoding?</h3>
+                            <div class="faq-toggle">+</div>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Base 62 uses only alphanumeric characters [0-9, a-z, A-Z], avoiding URL-unsafe characters like '+' and '/' found in Base 64. This ensures the shortened URLs work reliably across all systems without encoding issues.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <h3>Q2. How do you handle URL expiration?</h3>
+                            <div class="faq-toggle">+</div>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Add an 'expiresAt' column to the database. During redirects, check if the current time exceeds the expiration time. Use a background job to periodically clean up expired URLs and free up storage space.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <h3>Q3. What if the unique ID generator fails?</h3>
+                            <div class="faq-toggle">+</div>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Implement multiple ID generator instances with different ranges (e.g., Server 1: 1-1M, Server 2: 1M-2M). Use a load balancer with health checks to route requests to healthy instances. Consider using distributed algorithms like Snowflake for better resilience.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <h3>Q4. How do you prevent malicious URLs?</h3>
+                            <div class="faq-toggle">+</div>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Implement URL validation against blacklists of known malicious domains, use third-party security services for real-time threat detection, and provide user reporting mechanisms. Consider scanning URLs with antivirus APIs before shortening.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFAQ(this)">
+                            <h3>Q5. How do you handle database sharding?</h3>
+                            <div class="faq-toggle">+</div>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Use consistent hashing based on the short URL to distribute data evenly across shards. Implement a routing layer that determines which shard contains the data. Plan for shard rebalancing when adding new database nodes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <button id="backToTopBtn" title="Go to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">URL Shortener Design</div>
+                <div class="footer-links">
+                    <a href="#overview-section">Overview</a>
+                    <a href="#high-level-design">Architecture</a>
+                    <a href="#hash-function">Hash Function</a>
+                    <a href="#scaling">Scaling</a>
+                    <a href="#faqs">FAQs</a>
+                </div>
+                <p class="footer-copyright">&copy; 2025 System Design Guide. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const navLinks = document.getElementById('navLinks');
+        const header = document.getElementById('header');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const hamburger = mobileMenuBtn.querySelector('.hamburger');
+            hamburger.classList.toggle('active');
+        });
+
+        // Header scroll effect
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 100) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+            toggleBackToTopButton();
+        });
+
+        // Progress bar
+        window.addEventListener('scroll', () => {
+            const scrollTop = document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollPercent = (scrollTop / scrollHeight) * 100;
+            document.getElementById('progressBar').style.width = scrollPercent + '%';
+        });
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    const headerOffset = header.offsetHeight;
+                    const elementPosition = target.getBoundingClientRect().top + window.pageYOffset;
+                    window.scrollTo({
+                        top: elementPosition - headerOffset - 20,
+                        behavior: 'smooth'
+                    });
+                }
+                navLinks.classList.remove('active');
+                mobileMenuBtn.querySelector('.hamburger').classList.remove('active');
+            });
+        });
+
+        // Intersection Observer for content section animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all content sections and TOC section
+        document.querySelectorAll('.content-section, .toc-section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // FAQ functionality
+        function toggleFAQ(element) {
+            const faqItem = element.parentElement;
+            const answer = element.nextElementSibling;
+            const toggle = element.querySelector('.faq-toggle');
+            
+            // Close all other FAQs
+            document.querySelectorAll('.faq-item').forEach(item => {
+                if (item !== faqItem && item.classList.contains('active')) {
+                    item.classList.remove('active');
+                    item.querySelector('.faq-answer').classList.remove('active');
+                    item.querySelector('.faq-toggle').textContent = '+';
+                }
+            });
+            
+            // Toggle current FAQ
+            if (faqItem.classList.contains('active')) {
+                faqItem.classList.remove('active');
+                answer.classList.remove('active');
+                toggle.textContent = '+';
+            } else {
+                faqItem.classList.add('active');
+                answer.classList.add('active');
+                toggle.textContent = '−';
+            }
+        }
+
+        // Active navigation highlighting
+        function updateActiveElements() {
+            const sections = document.querySelectorAll('section[id]');
+            const headerNavLinks = document.querySelectorAll('.nav-link');
+            const tocItems = document.querySelectorAll('.toc-item');
+            
+            let currentSectionId = '';
+            sections.forEach(section => {
+                const sectionTop = section.getBoundingClientRect().top;
+                const sectionHeight = section.clientHeight;
+                const offset = header.offsetHeight + 50;
+                
+                if (sectionTop <= offset && sectionTop + sectionHeight > offset) {
+                    currentSectionId = section.getAttribute('id');
+                }
+            });
+
+            // Update Header Nav Links
+            headerNavLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${currentSectionId}`) {
+                    link.classList.add('active');
+                }
+            });
+
+            // Update TOC Items
+            tocItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === `#${currentSectionId}`) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', updateActiveElements);
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            updateActiveElements();
+            document.querySelectorAll('.content-section, .toc-section').forEach(section => {
+                observer.observe(section);
+            });
+        });
+
+        // Back to Top Button Logic
+        const backToTopBtn = document.getElementById('backToTopBtn');
+
+        function toggleBackToTopButton() {
+            if (window.scrollY > 300) {
+                backToTopBtn.style.display = 'flex';
+                backToTopBtn.style.opacity = '1';
+                backToTopBtn.style.transform = 'translateY(0) scale(1)';
+            } else {
+                backToTopBtn.style.opacity = '0';
+                backToTopBtn.style.transform = 'translateY(20px) scale(0.9)';
+                setTimeout(() => {
+                    backToTopBtn.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Initial check for back to top button visibility
+        window.addEventListener('DOMContentLoaded', toggleBackToTopButton);
+    </script>
+</body>
+</html>
