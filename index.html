@@ -1174,6 +1174,12 @@
       margin: 10px auto;  /* center the image */
     }
   }
+  @media only screen and (max-width: 480px) {
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  }
     </style>
 </head>
 <body>
@@ -1540,8 +1546,9 @@ Response: HTTP 301/302 redirect to original URL
                             <div class="architecture-diagram">
                                 <div class="diagram-title">URL Shortening Process</div>
                                 <div class="diagram-flow">
-Long URL → Hash Function → Hash Value → Short URL
-www.tinyurl.com/{hashValue}
+
+Get longURL: longURL = hashTable.get(shortURL) <br>
+Once you get the longURL, perform the URL redirect. 
                                 </div>
                             </div>
                         </div>
@@ -1868,7 +1875,7 @@ Short URL: https://tinyurl.com/zn9edcu
                             </ul>
 
                             <div class="highlight-box">
-                                <h4><i class="fas fa="snowflake"></i> Recommended: Snowflake Algorithm</h4>
+                                <h4><i class="fas fa=snowflake"></i> Recommended: Snowflake Algorithm</h4>
                                 <p>Generates 64-bit IDs with timestamp, datacenter ID, machine ID, and sequence number for high performance and uniqueness.</p>
                             </div>
 
@@ -1896,9 +1903,7 @@ Short URL: https://tinyurl.com/zn9edcu
                                 <li><strong>Cache TTL:</strong> 24 hours for popular URLs</li>
                             </ul>
 
-                          
-                           
- <img src="URL2.png">
+                   <img src="URL2.png">
                             
 
                             <div class="info-box">
